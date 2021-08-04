@@ -17,6 +17,7 @@ namespace UnicorntoSCSConverter
         private string itemsEndLine = "\r\t}";
         private string endLine = "\r}";
         private bool includesPresent=false;
+        private bool excludesPresent = false;
         private string includeModuleName = string.Empty;
         private string includeModulePath = string.Empty;
         private string includeModuleDB = string.Empty;
@@ -25,6 +26,10 @@ namespace UnicorntoSCSConverter
         private string strConvertedConcatIncludeLines;
         private string endArrayBracket;
         private string referenceName;
+        private string[] lstConfig;
+        private string ruleList;
+        private int intLineNumTracker=0;
+        private int intlastInclude = 0;
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -35,50 +40,59 @@ namespace UnicorntoSCSConverter
         {
             string strConfigText = txtConfig.Text;
             string[] lstConfig = strConfigText.Split(new Char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-            int intPredicateLineNumTracker = 0;
+            int intLineNumTrackerIndex = 0;
 
             foreach (var line in lstConfig)
             {
-                intPredicateLineNumTracker += 1;
                 if (line.ToLowerInvariant().Contains("<predicate>"))
                 {
-                    predicateStartLineNum = intPredicateLineNumTracker;
+                    predicateStartLineNum = intLineNumTrackerIndex;
                     includesPresent = true;
                 }
 
                 if (line.ToLowerInvariant().Contains("</predicate>"))
                 {
-                    predicateEndLineNum = intPredicateLineNumTracker;
+                    predicateEndLineNum = intLineNumTrackerIndex;
+                    break;
                 }
+
+                if (line.ToLowerInvariant().Contains("include"))
+                {
+                    intlastInclude = intLineNumTrackerIndex;
+                }
+
+                intLineNumTrackerIndex += 1;
             }
         }
 
         protected void btnConvert_Click(object sender, EventArgs e)
         {
-            string convertedLine = string.Empty;
             if (string.IsNullOrWhiteSpace(txtConfig.Text)) return;
+            ruleList = string.Empty;
 
             GetPredicateLineNumbers();
-            int intLineNumTracker = 0;
+            //int intLineNumTracker = 0;
             string strConfigText = txtConfig.Text;
-            string[] lstConfig = strConfigText.Split(new Char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            lstConfig = strConfigText.Split(new Char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
-            foreach (var line in lstConfig)
+            for(intLineNumTracker = 0; intLineNumTracker <= predicateEndLineNum; intLineNumTracker++)
+            //foreach (var line in lstConfig)
             {
-                intLineNumTracker += 1;
-                CategorizeLine(line, intLineNumTracker);
+                //intLineNumTracker += 1;
+                var line = lstConfig[intLineNumTracker];
+                CategorizeLine(line);
 
-                if (intLineNumTracker > predicateStartLineNum && intLineNumTracker < predicateEndLineNum)
+                if (intLineNumTracker >= predicateStartLineNum && intLineNumTracker <= predicateEndLineNum)
                 {
-                    if (intLineNumTracker - 1 == predicateStartLineNum) strConvertedConcatIncludeLines += "\r\t\t" + "\"includes\": [";
+                    if (intLineNumTracker == predicateStartLineNum) strConvertedConcatIncludeLines += "\r\t\t" + "\"includes\": [";
 
-                    strConvertedConcatIncludeLines += GetInfoforInclude(line, intLineNumTracker);
+                    strConvertedConcatIncludeLines += GetInfoforInclude();
                 }
 
                 if (intLineNumTracker == predicateEndLineNum) endArrayBracket += "\r\t\t" + "]";
             }
 
-            convertedLine = startingLine + "\r\t" + ModuleNameLine + "\r\t" + referencesLine + "\r\t" + "\"items\": {";
+            var convertedLine = startingLine + "\r\t" + ModuleNameLine + "\r\t" + referencesLine + "\r\t" + "\"items\": {";
 
             convertedLine += strConvertedConcatIncludeLines;
 
@@ -103,9 +117,10 @@ namespace UnicorntoSCSConverter
             return result?.i ?? -1;
         }
 
-        private string GetInfoforInclude(string currline,int lineNum)
+        private string GetInfoforInclude()
         {
             string convertedLine = string.Empty;
+            string currline = lstConfig[intLineNumTracker];
 
             if (currline.ToLowerInvariant().Contains("include") && currline.ToLowerInvariant().Contains("name=") &&
                 currline.ToLowerInvariant().Contains("database=") && currline.ToLowerInvariant().Contains("path="))
@@ -120,15 +135,77 @@ namespace UnicorntoSCSConverter
                 convertedLine += "\r\t\t\t\t \"path\" : " + includeModulePath + ",";
                 convertedLine += "\r\t\t\t\t \"database\" : " + includeModuleDB;
 
+                if (currline.Trim().ToLowerInvariant().Substring(currline.Trim().Length - 2, 2)!="/>")
+                {
+                    excludesPresent = true;
+
+                    convertedLine+=BuildRules(convertedLine);
+                }
+
+                if (!string.IsNullOrWhiteSpace(ruleList)) convertedLine += "," + ruleList;
+                ruleList=string.Empty;
+
                 convertedLine += "\r\t\t\t}";
 
-                if (lineNum + 1 < predicateEndLineNum) convertedLine += ",";
+                if (intLineNumTracker == intlastInclude)
+                {
+                    convertedLine += "";
+                }
+                else
+                {
+                    convertedLine += ",";
+                }
             }
 
             return convertedLine;
         }
-        
-        private void CategorizeLine(string currline,int intLineNum)
+
+        private string BuildRules(string convertedlines)
+        {
+            do
+            {
+                var currline = lstConfig[intLineNumTracker];
+
+                if (currline.ToLowerInvariant().Contains("exclude") && currline.ToLowerInvariant().Contains("children=\"true\""))
+                {
+                    convertedlines = "\r\t\t\t\t \"scope\" : \"SingleItem\"";
+                    return convertedlines;
+
+                }
+
+                if (currline.ToLowerInvariant().Contains("exclude") && currline.ToLowerInvariant().Contains("childrenofpath"))
+                {
+                    if (string.IsNullOrWhiteSpace(ruleList))
+                    {
+                        ruleList += "\r\t\t\t\t \"rules\": [";
+                    }
+
+                    //extract path to ignore
+                    var extractChildrentoIgnore = ExtractValueBetweenQuotes(currline, "childrenOfPath=");
+                    ruleList += "\r\t\t\t\t\t\t {";
+                    ruleList += "\r\t\t\t\t\t\t\t \"scope\" : \"ignored\",";
+                    ruleList += "\r\t\t\t\t\t\t\t \"path\" : " + extractChildrentoIgnore;
+                    ruleList += "\r\t\t\t\t\t\t }";
+
+                    if (lstConfig[intLineNumTracker + 1].Trim() != "</include>")
+                    {
+                        ruleList += ",";
+                    }
+                }
+
+                intLineNumTracker++;
+
+            } while (lstConfig[intLineNumTracker].Trim()!="</include>");
+
+            if (!string.IsNullOrWhiteSpace(ruleList) && lstConfig[intLineNumTracker].Trim() == "</include>")
+            {
+                ruleList += "\r\t\t\t\t ]";
+            }
+
+            return string.Empty;
+        }
+
+        private void CategorizeLine(string currline)
         {
             if (currline.ToLowerInvariant().Contains("configuration") && currline.ToLowerInvariant().Contains("name"))
             {
