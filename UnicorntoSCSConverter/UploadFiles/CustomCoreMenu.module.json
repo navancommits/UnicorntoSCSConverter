@@ -1,0 +1,15 @@
+{
+  "namespace": "Feature.CustomCoreMenu",
+  "references": [
+   
+  ],
+  "items": {
+    "includes": [
+        {
+            "name": "MyMenu",
+            "path": "/sitecore/content/Documents and settings/All users/Start menu/Right/My Menu",
+            "database": "core"
+        }
+    ]
+  }
+}
