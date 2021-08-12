@@ -58,6 +58,7 @@
            background: #0077b5;
        }
    </style>
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.png" />
 </head>
 <body>
     <form id="form1" runat="server">
