@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="ScsModuleRuleEditor.aspx.cs" Inherits="UnicorntoSCSConverter.WebForm2" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="ScsModuleRuleEditor.aspx.cs" Inherits="UnicorntoSCSConverter.ScsModuleRuleEditor" %>
 
 <!DOCTYPE html>
 
@@ -20,6 +20,11 @@
            padding-left: 5px;
            padding-right: 5px;
        }
+
+       .sc_btn{          
+          background-image:url('~/icons/sitecorelogo.png');  
+          cursor:pointer;
+        }
 
       
        .header {
@@ -68,9 +73,16 @@
                 <h6 align="center" style="color: #808080; font-style: italic" >Poor man's Module Explorer</h6>   
             </div>
             <div class="loader">
-                <table  width="100%"><tr><td width="50%" align="left"><asp:FileUpload ID="ModuleFileUpload" runat="server"  /></td>
-                    <td  width="50%" style="margin-right: 10px;" align="right"><asp:Button ID="btnModuleLoad" runat="server"
-                                Text="1. Load Module JSON" OnClick="btnModuleLoad_Click"   class="btn btn-primary" /></td></tr></table>
+                <table  width="100%"><tr><td width="50%" align="left"><%--<asp:FileUpload ID="ModuleFileUpload" runat="server"  />--%><asp:DropDownList ID="ddlModuleJsonList" runat="server" OnSelectedIndexChanged="ddlModuleJsonList_SelectedIndexChanged" AutoPostBack="True" /> </td>
+                    <td  width="50%" style="margin-right: 10px;" align="right">
+                        <asp:Button ID="btnModuleLoad0" runat="server"
+                                Text="1. Perform Initial Serialization" OnClick="btnModuleLoad0_Click"   class="btn btn-primary" />
+                        <asp:Button ID="btnModuleLoad" runat="server"
+                                Text="1. Perform Initial Serialization" OnClick="btnModuleLoad_Click"   class="btn btn-primary" />
+                        <asp:Button ID="btnSync" Text="Sync" runat="server"  class="btn btn-primary"  Visible="false" BackColor="#dd5143" OnClick="Button1_Click" />                                          
+                                        <asp:Button ID="btnSerialize" Text="Serialize" runat="server" Visible="false" class="btn btn-primary"  BackColor="#dd5143" OnClick="Button2_Click" />
+                        
+                    </td></tr></table>
 
             </div>
             <div class="panel panel-default">
@@ -78,8 +90,7 @@
                     <div class="row">
                                                 <div id="gViewContainer"  class="col-lg-6 col-md-12  col-xs-12">
                             <div>
-                                <asp:Label ID="lblMessage" runat="server" EnableViewState="false"></asp:Label>
-                                <asp:Label ID="lblIncludeList" runat="server" Text="Select Include Name: "></asp:Label><asp:DropDownList id="ddlIncludeList" runat="server"/>
+                                <asp:Label ID="lblIncludeList" runat="server" Text="Select Include Name: "></asp:Label><asp:DropDownList id="ddlIncludeList" runat="server" OnSelectedIndexChanged="ddlIncludeList_SelectedIndexChanged"/>
                                 <div class="table-responsive">  
 	                            <asp:gridview ID="gvRules" runat="server" autogeneratecolumns="False" datakeynames="RuleId"  Width="98%"
                                 onrowcancelingedit="gvRules_RowCancelingEdit" onrowediting="gvRules_RowEditing"
@@ -125,19 +136,19 @@
 				                                </itemtemplate>
 				                                <edititemtemplate>
                                                     <asp:DropDownList ID="ddlScope" runat="server" DataValueField='<%# Bind("Scope") %>'>
-                                                        <asp:ListItem value="ItemAndDescendants">ItemAndDescendants</asp:ListItem>
-                                                        <asp:ListItem value="ItemAndChildren">ItemAndChildren</asp:ListItem>
-                                                        <asp:ListItem value="DescendantsOnly">DescendantsOnly</asp:ListItem>
-                                                        <asp:ListItem value="SingleItem">SingleItem</asp:ListItem>
+                                                        <asp:ListItem value="itemanddescendants">ItemAndDescendants</asp:ListItem>
+                                                        <asp:ListItem value="itemandchildren">ItemAndChildren</asp:ListItem>
+                                                        <asp:ListItem value="descendantsonly">DescendantsOnly</asp:ListItem>
+                                                        <asp:ListItem value="singleitem">SingleItem</asp:ListItem>
                                                         <asp:ListItem value="ignored">Ignored</asp:ListItem>
                                                     </asp:DropDownList>
 				                                </edititemtemplate>
 				                                <footertemplate>
                                                     <asp:DropDownList ID="ddlScope" runat="server" DataValueField='<%# Bind("Scope") %>'>
-                                                        <asp:ListItem value="ItemAndDescendants">ItemAndDescendants</asp:ListItem>
-                                                        <asp:ListItem value="ItemAndChildren">ItemAndChildren</asp:ListItem>
-                                                        <asp:ListItem value="DescendantsOnly">DescendantsOnly</asp:ListItem>
-                                                        <asp:ListItem value="SingleItem">SingleItem</asp:ListItem>
+                                                        <asp:ListItem value="itemanddescendants">ItemAndDescendants</asp:ListItem>
+                                                        <asp:ListItem value="itemandchildren">ItemAndChildren</asp:ListItem>
+                                                        <asp:ListItem value="descendantsonly">DescendantsOnly</asp:ListItem>
+                                                        <asp:ListItem value="singleitem">SingleItem</asp:ListItem>
                                                         <asp:ListItem value="ignored">Ignored</asp:ListItem>
                                                     </asp:DropDownList>
 				                                </footertemplate>
@@ -148,16 +159,16 @@
 				                                </itemtemplate>
 				                                <edititemtemplate>
                                                     <asp:DropDownList ID="ddlAllowedOperation" runat="server" DataValueField='<%# Bind("AllowedOperation") %>'>
-                                                        <asp:ListItem value="CreateUpdateAndDelete">CreateUpdateAndDelete</asp:ListItem>
-                                                        <asp:ListItem value="CreateAndUpdate">CreateAndUpdate</asp:ListItem>
-                                                        <asp:ListItem value="CreateOnly">CreateOnly</asp:ListItem>
+                                                        <asp:ListItem value="createupdateanddelete">CreateUpdateAndDelete</asp:ListItem>
+                                                        <asp:ListItem value="createandupdate">CreateAndUpdate</asp:ListItem>
+                                                        <asp:ListItem value="createonly">CreateOnly</asp:ListItem>
                                                     </asp:DropDownList>
 				                                </edititemtemplate>
 				                                <footertemplate>
                                                     <asp:DropDownList ID="ddlAllowedOperation" runat="server" DataValueField='<%# Bind("AllowedOperation") %>'>
-                                                        <asp:ListItem value="CreateUpdateAndDelete">CreateUpdateAndDelete</asp:ListItem>
-                                                        <asp:ListItem value="CreateAndUpdate">CreateAndUpdate</asp:ListItem>
-                                                        <asp:ListItem value="CreateOnly">CreateOnly</asp:ListItem>
+                                                        <asp:ListItem value="createupdateanddelete">CreateUpdateAndDelete</asp:ListItem>
+                                                        <asp:ListItem value="createandupdate">CreateAndUpdate</asp:ListItem>
+                                                        <asp:ListItem value="createonly">CreateOnly</asp:ListItem>
                                                     </asp:DropDownList>
 				                                </footertemplate>
 			                                </asp:templatefield>
@@ -172,37 +183,33 @@
                                         <SortedDescendingHeaderStyle BackColor="#383838" />
 	                            </asp:gridview>
                                     </div>
-                                <p align="right"><asp:Button ID="btnEditRules" runat="server"  style="margin-top: 10px; margin-right: 10px;"  class="btn btn-primary" Text="2. Edit Rules" OnClick="btnEditRules_Click" /></p>
+                                <p align="right"><asp:Button ID="btnEditRules" runat="server"  style="margin-top: 10px; margin-right: 10px;"  class="btn btn-primary" Text="2. Apply Rules" OnClick="btnEditRules_Click" /></p>
                                 </div>
                                 <div>
-                                    <asp:TextBox ID="txtIfElseBlock" runat="server" TextMode="MultiLine"  Height="420px" Width="98%">Coming soon... Rule Explanation here.....</asp:TextBox>
+                                    <asp:TextBox ID="txtIfElseBlock" runat="server" TextMode="MultiLine"  Height="420px" Width="98%" BackColor="#E6F1F8" ForeColor="#003C5B" ReadOnly="True">Rule Explanation here.....</asp:TextBox>
                                 </div>
+                                 <p><asp:label ID="lblStatus" runat="server"   /></p>
+
                             </div>
 
                         <div class="col-lg-6 col-md-12  col-xs-12">
-                            <div id="dvModuleJson" align="center" style="background:#D0CFCF; "><asp:TextBox ID="txtModuleJson" runat="server" TextMode="MultiLine"  Height="680px" Width="98%"></asp:TextBox><p align='right'>
-                                <asp:Button ID="btnValidateJson" Text="Valid JSON?" runat="server" OnClick="btnValidateJson_Click" class="btn btn-primary"  />
-                                <asp:Button ID="btnSaveAs" Text="3. Save JSON" runat="server" OnClick="btnSaveAs_Click" class="btn btn-primary" /></p></div>
-                          
+                            <div id="dvModuleJson" align="center" style="background:#D0CFCF; "><asp:TextBox ID="txtModuleJson" runat="server" TextMode="MultiLine"  Height="680px" Width="98%"></asp:TextBox>
+                                    
+                                    <div align='right'>   
+                                        <asp:Button ID="btnValidateJson" Text="Valid JSON?" runat="server" OnClick="btnValidateJson_Click" class="btn btn-primary"  />
+                                        <asp:Button ID="btnSaveAs" Text="3. Save JSON" runat="server" OnClick="btnSaveAs_Click" class="btn btn-primary" />     
+                                        <%--<asp:Button ID="Button1" Text="Sync" runat="server"  class="btn btn-primary" BackColor="#dd5143" OnClick="Button1_Click" />                                          
+                                        <asp:Button ID="Button2" Text="Serialize" runat="server" class="btn btn-primary"  BackColor="#dd5143" OnClick="Button2_Click" />--%>
+                                                                               
+                                    </div>
+                            </div>                               
                         </div>
                     </div>
                 </div>
             </div>     
            
             
-            <%--<div class="panel panel-default">
-                <div class="panel-body"><h2 align="center">SCS Rule Editor</h2></div>
-                <div class="panel-body">
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div style="background:lightgray; height:100px">Column 1</div>
-                            <div style="background:lightgoldenrodyellow; height:200px">Column 2</div>
-                        </div>
-                        <div class="col-md-6" style="background:lightcyan; height:300px">Column 3</div>
-                    </div>
-                </div>
-            </div>--%>
+            <%# Eval("RuleId") %>
         
     </form>
 </body>

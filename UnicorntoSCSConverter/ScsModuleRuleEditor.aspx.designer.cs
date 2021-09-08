@@ -11,7 +11,7 @@ namespace UnicorntoSCSConverter
 {
 
 
-    public partial class WebForm2
+    public partial class ScsModuleRuleEditor
     {
 
         /// <summary>
@@ -24,13 +24,22 @@ namespace UnicorntoSCSConverter
         protected global::System.Web.UI.HtmlControls.HtmlForm form1;
 
         /// <summary>
-        /// ModuleFileUpload control.
+        /// ddlModuleJsonList control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.FileUpload ModuleFileUpload;
+        protected global::System.Web.UI.WebControls.DropDownList ddlModuleJsonList;
+
+        /// <summary>
+        /// btnModuleLoad0 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnModuleLoad0;
 
         /// <summary>
         /// btnModuleLoad control.
@@ -42,13 +51,22 @@ namespace UnicorntoSCSConverter
         protected global::System.Web.UI.WebControls.Button btnModuleLoad;
 
         /// <summary>
-        /// lblMessage control.
+        /// btnSync control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblMessage;
+        protected global::System.Web.UI.WebControls.Button btnSync;
+
+        /// <summary>
+        /// btnSerialize control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnSerialize;
 
         /// <summary>
         /// lblIncludeList control.
@@ -94,6 +112,15 @@ namespace UnicorntoSCSConverter
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.TextBox txtIfElseBlock;
+
+        /// <summary>
+        /// lblStatus control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lblStatus;
 
         /// <summary>
         /// txtModuleJson control.
