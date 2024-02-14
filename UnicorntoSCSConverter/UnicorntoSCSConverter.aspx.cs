@@ -30,11 +30,17 @@ namespace UnicorntoSCSConverter
         private string ruleList;
         private int intLineNumTracker=0;
         private int intlastInclude = 0;
+        private bool RulesListed = false;
+        private int intCurrentInclude = 0;
+        private int intIncludeCount = 0;
+        private int intRuleCount = 0;
 
         protected void Page_Load(object sender, EventArgs e)
         {
 
         }
+
+
 
         private void GetPredicateLineNumbers()
         {
@@ -74,8 +80,9 @@ namespace UnicorntoSCSConverter
             //int intLineNumTracker = 0;
             string strConfigText = txtConfig.Text;
             lstConfig = strConfigText.Split(new Char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            CountInclude();
 
-            for(intLineNumTracker = 0; intLineNumTracker <= predicateEndLineNum; intLineNumTracker++)
+            for (intLineNumTracker = 0; intLineNumTracker <= predicateEndLineNum; intLineNumTracker++)
             //foreach (var line in lstConfig)
             {
                 //intLineNumTracker += 1;
@@ -87,7 +94,7 @@ namespace UnicorntoSCSConverter
                     if (intLineNumTracker == predicateStartLineNum) strConvertedConcatIncludeLines += "\r\t\t" + "\"includes\": [";
 
                     strConvertedConcatIncludeLines += GetInfoforInclude();
-                }
+                }               
 
                 if (intLineNumTracker == predicateEndLineNum) endArrayBracket += "\r\t\t" + "]";
             }
@@ -117,6 +124,36 @@ namespace UnicorntoSCSConverter
             return result?.i ?? -1;
         }
 
+        private void CountInclude()
+        {
+            int includeCount = 0;
+
+            for (intLineNumTracker = 0; intLineNumTracker <= predicateEndLineNum; intLineNumTracker++)
+            {
+                string currline = lstConfig[intLineNumTracker];
+
+                if (currline.ToLowerInvariant().Contains("<include")) includeCount += 1;
+
+            }
+
+            intIncludeCount= includeCount;
+        }
+
+        private void CountRulesinInclude(int includeStartlineNumber, int includeEndlineNumber)
+        {
+            int ruleCount = 0;
+
+            for (intLineNumTracker = includeStartlineNumber; intLineNumTracker <= includeEndlineNumber; intLineNumTracker++)
+            {
+                string currline = lstConfig[intLineNumTracker];
+
+                if (currline.ToLowerInvariant().Contains("<except")) ruleCount += 1;
+
+            }
+
+            intRuleCount = ruleCount;
+        }
+
         private string GetInfoforInclude()
         {
             string convertedLine = string.Empty;
@@ -133,27 +170,31 @@ namespace UnicorntoSCSConverter
 
                 convertedLine += "\r\t\t\t\t \"name\" : " + includeModuleName + ",";
                 convertedLine += "\r\t\t\t\t \"path\" : " + includeModulePath + ",";
-                convertedLine += "\r\t\t\t\t \"database\" : " + includeModuleDB;
+                convertedLine += "\r\t\t\t\t \"database\" : " + includeModuleDB ;
 
                 if (currline.Trim().ToLowerInvariant().Substring(currline.Trim().Length - 2, 2)!="/>")
                 {
+                    convertedLine += ",";
                     excludesPresent = true;
+                    //CountRulesinInclude(intLineNumTracker,)
 
                     convertedLine+=BuildRules(convertedLine);
                 }
 
-                if (!string.IsNullOrWhiteSpace(ruleList)) convertedLine += "," + ruleList;
+                if (!string.IsNullOrWhiteSpace(ruleList)) convertedLine +=  ruleList;
                 ruleList=string.Empty;
 
                 convertedLine += "\r\t\t\t}";
 
-                if (intLineNumTracker == intlastInclude)
+                intCurrentInclude += 1;
+
+                if (intCurrentInclude >= intIncludeCount)
                 {
                     convertedLine += "";
                 }
                 else
                 {
-                    convertedLine += ",";
+                   convertedLine += ",";
                 }
             }
 
@@ -164,38 +205,82 @@ namespace UnicorntoSCSConverter
 
         private string BuildRules(string convertedlines)
         {
+            RulesListed = false;
             do
             {
-                var currline = lstConfig[intLineNumTracker];
-
-                if (currline.ToLowerInvariant().Contains("exclude") && currline.ToLowerInvariant().Contains("children=\"true\""))
+                if (!IsBlankLine(intLineNumTracker))
                 {
-                    convertedlines = "\r\t\t\t\t \"scope\" : \"SingleItem\"";
-                    return convertedlines;
+                    var currline = lstConfig[intLineNumTracker];
 
-                }
-
-                if (currline.ToLowerInvariant().Contains("exclude") && currline.ToLowerInvariant().Contains("childrenofpath"))
-                {
-                    if (string.IsNullOrWhiteSpace(ruleList))
+                    if (currline.ToLowerInvariant().Contains("exclude") && currline.ToLowerInvariant().Contains("children=\"true\""))
                     {
-                        ruleList += "\r\t\t\t\t \"rules\": [";
+                        convertedlines = "\r\t\t\t\t \"scope\" : \"SingleItem\"";
+                        var nextline = lstConfig[intLineNumTracker + 1];
+                        if (!nextline.ToLowerInvariant().Contains("except")) return convertedlines;
+
                     }
 
-                    //extract path to ignore
-                    var extractChildrentoIgnore = ExtractValueBetweenQuotes(currline, "childrenOfPath=");
-                    ruleList += "\r\t\t\t\t\t\t {";
-                    ruleList += "\r\t\t\t\t\t\t\t \"scope\" : \"ignored\",";
-                    ruleList += "\r\t\t\t\t\t\t\t \"path\" : " + extractChildrentoIgnore;
-                    ruleList += "\r\t\t\t\t\t\t }";
-
-                    if (lstConfig[intLineNumTracker + 1].Trim() != "</include>")
+                    var prevline = lstConfig[intLineNumTracker - 1];
+                    if (currline.ToLowerInvariant().Contains("except") && prevline.ToLowerInvariant().Contains("exclude"))
                     {
-                        ruleList += ",";
-                    }
-                }
+                        //these must be serialized too
+                        if (string.IsNullOrWhiteSpace(ruleList))
+                        {
+                            ruleList += "\r\t\t\t\t \"rules\": [";
+                        }
 
-                intLineNumTracker++;
+                        do
+                        {
+                            currline = lstConfig[intLineNumTracker];
+                            var extractChildtoInclude = ExtractValueBetweenQuotes(currline, "name=", true);
+
+                            ruleList += "\r\t\t\t\t\t\t {";
+                            ruleList += "\r\t\t\t\t\t\t\t \"scope\" : \"ItemandDescendants\",";
+                            ruleList += "\r\t\t\t\t\t\t\t \"path\" : " + extractChildtoInclude;
+                            ruleList += "\r\t\t\t\t\t\t }";
+
+                            if (lstConfig[intLineNumTracker + 1].Trim() != "</exclude>" && !RulesListed)
+                            {
+                                ruleList += ",";
+                            }
+
+                            intLineNumTracker += 1;
+
+                        } while (lstConfig[intLineNumTracker].Trim() != "</exclude>");
+
+                        if (lstConfig[intLineNumTracker + 1].Trim() != "</include>")
+                        {
+                            ruleList += "\r\t\t\t\t\t\t {";
+                            ruleList += "\r\t\t\t\t\t\t\t \"scope\" : \"ignored\",";
+                            ruleList += "\r\t\t\t\t\t\t\t \"path\" : \"*\"";
+                            ruleList += "\r\t\t\t\t\t\t }";
+
+                            RulesListed = true;
+                        }
+                    }
+
+                    //if (currline.ToLowerInvariant().Contains("exclude") && currline.ToLowerInvariant().Contains("childrenofpath"))
+                    //{
+                    //    if (string.IsNullOrWhiteSpace(ruleList))
+                    //    {
+                    //        ruleList += "\r\t\t\t\t \"rules\": [";
+                    //    }
+
+                    //    //extract path to ignore
+                    //    var extractChildrentoIgnore = ExtractValueBetweenQuotes(currline, "childrenOfPath=");
+                    //    ruleList += "\r\t\t\t\t\t\t {";
+                    //    ruleList += "\r\t\t\t\t\t\t\t \"scope\" : \"ignored\",";
+                    //    ruleList += "\r\t\t\t\t\t\t\t \"path\" : " + extractChildrentoIgnore;
+                    //    ruleList += "\r\t\t\t\t\t\t }";
+
+                    //    if (lstConfig[intLineNumTracker + 1].Trim() != "</include>")
+                    //    {
+                    //        ruleList += ",";
+                    //    }
+                    //}
+
+                    intLineNumTracker++;
+                }
 
             } while (lstConfig[intLineNumTracker].Trim()!="</include>");
 
@@ -205,6 +290,13 @@ namespace UnicorntoSCSConverter
             }
 
             return string.Empty;
+        }
+
+        private bool IsBlankLine(int currLine)
+        {
+            if (string.IsNullOrWhiteSpace(lstConfig[currLine])) return true;
+
+            return false;
         }
 
         private void CategorizeLine(string currline)
@@ -226,9 +318,11 @@ namespace UnicorntoSCSConverter
 
                 referencesLine = "\"references\": [" + referenceName + "],";
             }
+
+            if (currline.ToLowerInvariant().Contains("</include>")) intIncludeCount += 1;
         }
 
-        private string ExtractValueBetweenQuotes(string currline, string subStringStart)
+        private string ExtractValueBetweenQuotes(string currline, string subStringStart,bool path=false)
         {
             int intIncludeModuleName = currline.LastIndexOf(subStringStart, StringComparison.Ordinal);
             string stringforIncludeName = currline.Substring(intIncludeModuleName);
@@ -237,7 +331,27 @@ namespace UnicorntoSCSConverter
             var intSecond = IndexofnthOccurence(stringforIncludeName, '"', 2);
 
             var intStringLen = intSecond - intFirst;
+
+            if (path) {
+
+                string value = stringforIncludeName.Substring(intFirst, intStringLen + 1);
+
+                return ReplaceFirst(value, "\"", "\"/");
+
+            }
+
             return stringforIncludeName.Substring(intFirst, intStringLen + 1);
+        }
+
+        public static string ReplaceFirst(string str, string term, string replace)
+        {
+            int position = str.IndexOf(term);
+            if (position < 0)
+            {
+                return str;
+            }
+            str = str.Substring(0, position) + replace + str.Substring(position + term.Length);
+            return str;
         }
     }
 }
