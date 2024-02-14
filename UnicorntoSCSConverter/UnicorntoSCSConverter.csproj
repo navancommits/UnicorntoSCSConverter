@@ -246,6 +246,10 @@
     <Content Include="sclogo.png" />
     <Content Include="ScsModuleRuleEditor.aspx" />
     <Content Include="sitecorelogo.png" />
+    <Content Include="unicorn files\unicorn.serialization.4.config" />
+    <None Include="unicorn files\unicorn.serialization.3.config" />
+    <None Include="unicorn files\unicorn.serialization.2.config" />
+    <None Include="unicorn files\unicorn.serialization.1.config" />
     <Content Include="UnicorntoSCSConverter.aspx" />
     <Content Include="Content\bootstrap-theme.css.map" />
     <Content Include="Content\bootstrap-theme.min.css.map" />

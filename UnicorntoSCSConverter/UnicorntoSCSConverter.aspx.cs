@@ -239,16 +239,16 @@ namespace UnicorntoSCSConverter
                             ruleList += "\r\t\t\t\t\t\t\t \"path\" : " + extractChildtoInclude;
                             ruleList += "\r\t\t\t\t\t\t }";
 
-                            if (lstConfig[intLineNumTracker + 1].Trim() != "</exclude>" && !RulesListed)
-                            {
+                           // if (lstConfig[intLineNumTracker + 1].Trim() != "</exclude>" && !RulesListed)
+                           // {
                                 ruleList += ",";
-                            }
+                            //}
 
                             intLineNumTracker += 1;
 
                         } while (lstConfig[intLineNumTracker].Trim() != "</exclude>");
 
-                        if (lstConfig[intLineNumTracker + 1].Trim() != "</include>")
+                        if (lstConfig[intLineNumTracker].Trim() == "</exclude>")
                         {
                             ruleList += "\r\t\t\t\t\t\t {";
                             ruleList += "\r\t\t\t\t\t\t\t \"scope\" : \"ignored\",";
