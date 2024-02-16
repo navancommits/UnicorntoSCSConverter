@@ -3,12 +3,70 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management.Automation;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
 namespace UnicorntoSCSConverter
 {
+
+    internal class Predicate
+    {
+        internal int StartLineIndex{ get; set; }
+        internal int EndLineIndex{ get; set; }
+        internal int PredicateNumber { get; set; }
+    }
+
+    internal class Configuration
+    {
+        internal int StartLineIndex { get; set; }
+        internal int EndLineIndex { get; set; }
+        internal int ConfigurationNumber { get; set; }
+    }
+
+    internal class Include
+    {
+        internal int StartLineIndex { get; set; }
+        internal int EndLineIndex { get; set; }
+        internal int PredicateNumber { get; set; }
+        internal int IncludeNumber { get; set; }
+    }
+
+    internal class Exclude
+    {
+        internal int StartLineIndex { get; set; }
+        internal int EndLineIndex { get; set; }
+        internal int PredicateNumber { get; set; }
+        internal int IncludeNumber { get; set; }
+        internal int ExcludeNumber { get; set; }
+    }
+
+    internal class Except
+    {
+        internal int StartLineIndex { get; set; }
+        internal int EndLineIndex { get; set; }
+        internal int PredicateNumber { get; set; }
+        internal int IncludeNumber { get; set; }
+        internal int ExcludeNumber { get; set; }
+        internal int ExceptNumber { get; set; }
+    }
+
+    internal class Configurations
+    {
+        internal int StartLineIndex { get; set; }
+        internal int EndLineIndex { get; set; }
+    }
+
+    internal class TagInfo
+    {
+        internal int StartLineIndex { get; set; }
+        internal int EndLineIndex { get; set; }
+        internal string TagType { get; set; }
+        internal int TagTypeCount { get; set; }
+        internal int ParentTagPosition { get; set; }
+    }
+
     public partial class UnicorntoSCSConverter : System.Web.UI.Page
     {
         private string ModuleNameLine = string.Empty;
@@ -23,7 +81,6 @@ namespace UnicorntoSCSConverter
         private string includeModuleDB = string.Empty;
         private int predicateStartLineNum ;
         private int predicateEndLineNum;
-        private string strConvertedConcatIncludeLines;
         private string endArrayBracket;
         private string referenceName;
         private string[] lstConfig;
@@ -34,13 +91,177 @@ namespace UnicorntoSCSConverter
         private int intCurrentInclude = 0;
         private int intIncludeCount = 0;
         private int intRuleCount = 0;
+        private List<Predicate> PredicateList;
+        private List<Include> IncludeList;
+        private List<Exclude> ExcludeList;
+        private List<Except> ExceptList;
+        private List<Configuration> ConfigurationList;
+        private Configuration configuration;
+        private Predicate predicate;
+        private Configurations configurations;
+        private Include include;
+        private Exclude exclude;
+        private Except except;
+        private TagInfo tagInfo;
+        private int configsTagCount;
+        private int predicatesTagCount;
+        private int includesTagCount;
+        private int exceptsTagCount;
+        private List<TagInfo> tags;
+        private int predicateNumber=0;
+        private int includeNumber = 0;
+        private int excludeNumber = 0;
+        private int exceptNumber = 0;
+        private int configurationNumber = 0;
 
         protected void Page_Load(object sender, EventArgs e)
         {
-
+            PredicateList = new List<Predicate>();
+            IncludeList = new List<Include>();
+            ExceptList = new List<Except>();
+            ExcludeList = new List<Exclude>();
+            ConfigurationList = new List<Configuration>();
         }
 
+        private void GetLineNumbers()
+        {
+            string strConfigText = txtConfig.Text;
+            string[] lstConfig = strConfigText.Split(new Char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            int intLineNumTrackerIndex = 0;
 
+            foreach (var line in lstConfig)
+            {
+
+                if (line.ToLowerInvariant().Contains("<configurations>"))
+                {
+                    configurations = new Configurations
+                    {
+                        StartLineIndex = intLineNumTrackerIndex
+                    };
+
+                }
+
+                if (line.ToLowerInvariant().Contains("</configurations>"))
+                {
+                    configurations.EndLineIndex = intLineNumTrackerIndex;
+                }
+
+                if (line.ToLowerInvariant().Contains("<configuration ") && line.ToLowerInvariant().Contains("name"))
+                {
+                    configurationNumber += 1;
+                    configuration = new Configuration
+                    {
+                        StartLineIndex = intLineNumTrackerIndex
+                    };
+
+                }
+
+                if (line.ToLowerInvariant().Contains("</sitecore>")) break; //safety net for next line
+
+                if (line.ToLowerInvariant().Contains("</configuration>"))
+                {
+                    configuration.EndLineIndex = intLineNumTrackerIndex;
+                    configuration.ConfigurationNumber = configurationNumber;
+                    ConfigurationList.Add(configuration);
+
+                }
+
+                if (line.ToLowerInvariant().Contains("<predicate"))
+                {
+                    predicateNumber += 1;
+                    predicate = new Predicate
+                    {
+                        StartLineIndex = intLineNumTrackerIndex
+                    };
+                }
+
+                if (line.ToLowerInvariant().Contains("</predicate>"))
+                {
+                    predicate.EndLineIndex = intLineNumTrackerIndex;
+                    predicate.PredicateNumber = predicateNumber;
+                    PredicateList.Add(predicate);
+                }
+
+                if (line.ToLowerInvariant().Contains("<include") && line.ToLowerInvariant().Contains("/>"))
+                {
+                    includeNumber += 1;
+                    include = new Include
+                    {
+                        StartLineIndex = intLineNumTrackerIndex,
+                        EndLineIndex = intLineNumTrackerIndex,
+                        PredicateNumber = predicateNumber,
+                        IncludeNumber=includeNumber
+                        
+                    };
+                    IncludeList.Add(include);
+                }
+                else if (line.ToLowerInvariant().Contains("<include") && !line.ToLowerInvariant().Contains("/>"))
+                {
+                    includeNumber += 1;
+                    include = new Include
+                    {
+                        StartLineIndex = intLineNumTrackerIndex
+                    };
+                }
+
+                if (line.ToLowerInvariant().Contains("</include>"))
+                {                    
+                    include.EndLineIndex = intLineNumTrackerIndex;
+                    include.PredicateNumber = predicateNumber;
+                    include.IncludeNumber = includeNumber;
+                    IncludeList.Add(include);
+                    
+                }
+
+                if (line.ToLowerInvariant().Contains("<exclude") && line.ToLowerInvariant().Contains("/>"))
+                {
+                    excludeNumber += 1;
+                    exclude = new Exclude
+                    {
+                        StartLineIndex = intLineNumTrackerIndex,
+                        EndLineIndex = intLineNumTrackerIndex,
+                        PredicateNumber = predicateNumber,
+                        IncludeNumber = includeNumber,
+                        ExcludeNumber=excludeNumber
+                    };
+                    ExcludeList.Add(exclude);
+                }
+                else if (line.ToLowerInvariant().Contains("<exclude") && !line.ToLowerInvariant().Contains("/>"))
+                {
+                    excludeNumber += 1;
+                    exclude = new Exclude
+                    {
+                        StartLineIndex = intLineNumTrackerIndex
+                    };
+                }
+
+                if (line.ToLowerInvariant().Contains("</exclude>"))
+                {
+                    exclude.EndLineIndex = intLineNumTrackerIndex;
+                    exclude.PredicateNumber = predicateNumber;
+                    exclude.IncludeNumber = includeNumber;
+                    exclude.ExcludeNumber = excludeNumber;
+                    ExcludeList.Add(exclude);
+
+                }
+
+                if (line.ToLowerInvariant().Contains("<except") && line.ToLowerInvariant().Contains("/>"))
+                {
+                    exceptNumber += 1;
+                    except = new Except
+                    {
+                        StartLineIndex = intLineNumTrackerIndex,
+                        EndLineIndex = intLineNumTrackerIndex,
+                        PredicateNumber = predicateNumber,
+                        IncludeNumber = includeNumber,
+                        ExceptNumber = exceptNumber
+                    };
+                    ExceptList.Add(except);
+                }
+
+                intLineNumTrackerIndex += 1;
+            }
+        }
 
         private void GetPredicateLineNumbers()
         {
@@ -53,7 +274,6 @@ namespace UnicorntoSCSConverter
                 if (line.ToLowerInvariant().Contains("<predicate>"))
                 {
                     predicateStartLineNum = intLineNumTrackerIndex;
-                    includesPresent = true;
                 }
 
                 if (line.ToLowerInvariant().Contains("</predicate>"))
@@ -62,13 +282,40 @@ namespace UnicorntoSCSConverter
                     break;
                 }
 
-                if (line.ToLowerInvariant().Contains("include"))
+                if (line.ToLowerInvariant().Contains("<include"))
                 {
-                    intlastInclude = intLineNumTrackerIndex;
+                    includesPresent = true;
                 }
 
                 intLineNumTrackerIndex += 1;
+            } 
+
+        }
+
+        private string GetConfigurationLine(string currline, int occurrence)
+        {
+            string moduleLine = string.Empty;
+            string refLine = string.Empty;
+
+            if (currline.ToLowerInvariant().Contains("configuration") && currline.ToLowerInvariant().Contains("name"))
+            {
+                var intFirst = IndexofnthOccurence(currline, '"', 1);
+                var intSecond = IndexofnthOccurence(currline, '"', 2);
+
+                var intStringLen = intSecond - intFirst;
+                string modulename = currline.Substring(intFirst, intStringLen + 1);
+
+                moduleLine = "\"namespace\": " + modulename + ",";
             }
+
+            if (currline.ToLowerInvariant().Contains("dependencies"))
+                refLine = "\"references\": [" + ExtractValueBetweenQuotes(currline.Replace(",", "\",\""), "dependencies=") + "],";
+
+            if (occurrence>1) return "\r{" + "\r\t" + moduleLine + "\r\t" + refLine + "\r\t" + "\"items\": {";
+
+            return "{" + "\r\t" + moduleLine + "\r\t" + refLine + "\r\t" + "\"items\": {";
+
+            //if (currline.ToLowerInvariant().Contains("</include>")) intIncludeCount += 1;
         }
 
         protected void btnConvert_Click(object sender, EventArgs e)
@@ -76,37 +323,52 @@ namespace UnicorntoSCSConverter
             if (string.IsNullOrWhiteSpace(txtConfig.Text)) return;
             ruleList = string.Empty;
 
+            GetLineNumbers();
+
             GetPredicateLineNumbers();
-            //int intLineNumTracker = 0;
             string strConfigText = txtConfig.Text;
             lstConfig = strConfigText.Split(new Char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
             CountInclude();
+            string convertedLine = string.Empty;
 
-            for (intLineNumTracker = 0; intLineNumTracker <= predicateEndLineNum; intLineNumTracker++)
-            //foreach (var line in lstConfig)
+            for (intLineNumTracker = configurations.StartLineIndex; intLineNumTracker <= configurations.EndLineIndex; intLineNumTracker++)
             {
-                //intLineNumTracker += 1;
-                var line = lstConfig[intLineNumTracker];
-                CategorizeLine(line);
-
-                if (intLineNumTracker >= predicateStartLineNum && intLineNumTracker <= predicateEndLineNum)
+                foreach (var config in ConfigurationList)
                 {
-                    if (intLineNumTracker == predicateStartLineNum) strConvertedConcatIncludeLines += "\r\t\t" + "\"includes\": [";
+                    if (intLineNumTracker== config.StartLineIndex)
+                    {
+                        var line = lstConfig[intLineNumTracker];
 
-                    strConvertedConcatIncludeLines += GetInfoforInclude();
-                }               
+                        convertedLine += GetConfigurationLine(line, config.ConfigurationNumber);
+                    }                    
 
-                if (intLineNumTracker == predicateEndLineNum) endArrayBracket += "\r\t\t" + "]";
-            }
+                }
 
-            var convertedLine = startingLine + "\r\t" + ModuleNameLine + "\r\t" + referencesLine + "\r\t" + "\"items\": {";
+                foreach (var predicate in PredicateList)
+                {
 
-            convertedLine += strConvertedConcatIncludeLines;
+                    if (intLineNumTracker >= predicate.StartLineIndex && intLineNumTracker <= predicate.EndLineIndex)
+                    {
+                        if (intLineNumTracker == predicate.StartLineIndex) convertedLine += "\r\t\t" + "\"includes\": [";
 
-            convertedLine += endArrayBracket;
+                        convertedLine += GetInfoforInclude();
 
-            //closing brackets
-            convertedLine += itemsEndLine + endLine;
+                        if (intLineNumTracker == predicate.EndLineIndex) convertedLine += "\r\t\t" + "]";
+                    }
+
+                }
+
+                //closing brackets
+                foreach (var config in ConfigurationList)
+                {
+                    if (intLineNumTracker == config.EndLineIndex)
+                    {
+                        var line = lstConfig[intLineNumTracker];
+
+                        if (intLineNumTracker == config.EndLineIndex) convertedLine += itemsEndLine + endLine;
+                    }
+                }
+            }            
 
             txtJson.Text = convertedLine;
         }
@@ -139,21 +401,6 @@ namespace UnicorntoSCSConverter
             intIncludeCount= includeCount;
         }
 
-        private void CountRulesinInclude(int includeStartlineNumber, int includeEndlineNumber)
-        {
-            int ruleCount = 0;
-
-            for (intLineNumTracker = includeStartlineNumber; intLineNumTracker <= includeEndlineNumber; intLineNumTracker++)
-            {
-                string currline = lstConfig[intLineNumTracker];
-
-                if (currline.ToLowerInvariant().Contains("<except")) ruleCount += 1;
-
-            }
-
-            intRuleCount = ruleCount;
-        }
-
         private string GetInfoforInclude()
         {
             string convertedLine = string.Empty;
@@ -176,7 +423,6 @@ namespace UnicorntoSCSConverter
                 {
                     convertedLine += ",";
                     excludesPresent = true;
-                    //CountRulesinInclude(intLineNumTracker,)
 
                     convertedLine+=BuildRules(convertedLine);
                 }
@@ -259,26 +505,6 @@ namespace UnicorntoSCSConverter
                         }
                     }
 
-                    //if (currline.ToLowerInvariant().Contains("exclude") && currline.ToLowerInvariant().Contains("childrenofpath"))
-                    //{
-                    //    if (string.IsNullOrWhiteSpace(ruleList))
-                    //    {
-                    //        ruleList += "\r\t\t\t\t \"rules\": [";
-                    //    }
-
-                    //    //extract path to ignore
-                    //    var extractChildrentoIgnore = ExtractValueBetweenQuotes(currline, "childrenOfPath=");
-                    //    ruleList += "\r\t\t\t\t\t\t {";
-                    //    ruleList += "\r\t\t\t\t\t\t\t \"scope\" : \"ignored\",";
-                    //    ruleList += "\r\t\t\t\t\t\t\t \"path\" : " + extractChildrentoIgnore;
-                    //    ruleList += "\r\t\t\t\t\t\t }";
-
-                    //    if (lstConfig[intLineNumTracker + 1].Trim() != "</include>")
-                    //    {
-                    //        ruleList += ",";
-                    //    }
-                    //}
-
                     intLineNumTracker++;
                 }
 
@@ -297,29 +523,6 @@ namespace UnicorntoSCSConverter
             if (string.IsNullOrWhiteSpace(lstConfig[currLine])) return true;
 
             return false;
-        }
-
-        private void CategorizeLine(string currline)
-        {
-            if (currline.ToLowerInvariant().Contains("configuration") && currline.ToLowerInvariant().Contains("name"))
-            {
-                var intFirst=IndexofnthOccurence(currline, '"', 1);
-                var intSecond = IndexofnthOccurence(currline, '"', 2);
-
-                var intStringLen = intSecond - intFirst;
-                string modulename= currline.Substring(intFirst, intStringLen+1);
-
-                ModuleNameLine= "\"namespace\": " + modulename + ",";
-            }
-
-            if (currline.ToLowerInvariant().Contains("dependencies"))
-            {
-                referenceName = ExtractValueBetweenQuotes(currline, "dependencies=");
-
-                referencesLine = "\"references\": [" + referenceName + "],";
-            }
-
-            if (currline.ToLowerInvariant().Contains("</include>")) intIncludeCount += 1;
         }
 
         private string ExtractValueBetweenQuotes(string currline, string subStringStart,bool path=false)
